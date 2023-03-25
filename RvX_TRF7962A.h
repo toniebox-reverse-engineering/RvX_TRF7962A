@@ -1,9 +1,9 @@
-#ifndef TRF7962A_H
-#define TRF7962A_H
+#ifndef RvX_TRF7962A_H
+#define RvX_TRF7962A_H
 
 #include <SPI.h>
 
-class TRF7962A {
+class RvX_TRF7962A {
     public:
         enum class TAG_EVENT {
             TAG_NOP,
@@ -48,7 +48,7 @@ class TRF7962A {
             NO_RESPONSE_RECEIVED_15693 = 0x0A
         };
 
-        static TRF7962A* instance;
+        static RvX_TRF7962A* instance;
 
         void 
             begin(uint8_t enablePin, uint8_t irqPin);

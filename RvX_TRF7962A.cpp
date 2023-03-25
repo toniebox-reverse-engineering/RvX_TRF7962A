@@ -1,36 +1,36 @@
 #include <Arduino.h>
-#include "TRF7962A.h"
+#include "RvX_TRF7962A.h"
 
-TRF7962A* TRF7962A::instance = NULL;
+RvX_TRF7962A* RvX_TRF7962A::instance = NULL;
 
-void TRF7962A::delayTask(uint16_t ms) {
+void RvX_TRF7962A::delayTask(uint16_t ms) {
   delay(ms);
 }
-void TRF7962A::handleTagEvent(TAG_EVENT tagEvent) {
+void RvX_TRF7962A::handleTagEvent(TAG_EVENT tagEvent) {
   lastEvent = tagEvent;
 }
-void TRF7962A::handleResult(ISO15693_RESULT tagResult) {
+void RvX_TRF7962A::handleResult(ISO15693_RESULT tagResult) {
   lastResult = tagResult;
 }
-bool TRF7962A::isTagActive() {
+bool RvX_TRF7962A::isTagActive() {
   return tagActive;
 }
 
-void TRF7962A::begin(uint8_t enablePin, uint8_t irqPin) {
+void RvX_TRF7962A::begin(uint8_t enablePin, uint8_t irqPin) {
   instance = this;
 
   spiEnablePin = enablePin;
   rfidIrqPin = irqPin;
   pinMode(spiEnablePin, OUTPUT);
   pinMode(rfidIrqPin, INPUT);
-  attachInterrupt(rfidIrqPin, &TRF7962A::receivedInterruptStatic, RISING);
+  attachInterrupt(rfidIrqPin, &RvX_TRF7962A::receivedInterruptStatic, RISING);
   SPI.begin(4, 3, 2);
   SPI.setDataMode(SPI_MODE0);
 
   resetRFID();
 }
 
-TRF7962A::TAG_EVENT TRF7962A::loop() { 
+RvX_TRF7962A::TAG_EVENT RvX_TRF7962A::loop() { 
   lastEvent = TAG_EVENT::TAG_NOP; 
   resetRFID();
   initRFID();
@@ -83,10 +83,10 @@ TRF7962A::TAG_EVENT TRF7962A::loop() {
   return lastEvent;
 }
 
-void TRF7962A::receivedInterruptStatic() {
+void RvX_TRF7962A::receivedInterruptStatic() {
   instance->receivedInterrupt();
 }
-void TRF7962A::receivedInterrupt() {
+void RvX_TRF7962A::receivedInterrupt() {
   IRQ_STATUS irqStatus;
   interrupt = true;
   do {
@@ -100,7 +100,7 @@ void TRF7962A::receivedInterrupt() {
     }
   } while (digitalRead(rfidIrqPin)); 
 }
-void TRF7962A::processInterrupt(IRQ_STATUS irqStatus) {
+void RvX_TRF7962A::processInterrupt(IRQ_STATUS irqStatus) {
   if (irqStatus == (IRQ_STATUS)((uint8_t)IRQ_STATUS::TX_COMPLETE | (uint8_t)IRQ_STATUS::FIFO_HIGH_OR_LOW)) {
     trfStatus = TRF_STATUS::TX_COMPLETE; 
   } else if (irqStatus == IRQ_STATUS::TX_COMPLETE) {
@@ -172,29 +172,29 @@ void TRF7962A::processInterrupt(IRQ_STATUS irqStatus) {
   }
 }
 
-void TRF7962A::clearInterrupt() {
+void RvX_TRF7962A::clearInterrupt() {
   interrupt = false;
 }
-bool TRF7962A::readInterrupt() {
+bool RvX_TRF7962A::readInterrupt() {
   return interrupt;
 }
 
-void TRF7962A::setSlaveSelect(bool enabled) {
+void RvX_TRF7962A::setSlaveSelect(bool enabled) {
     digitalWrite(spiEnablePin, enabled);
 }
 
     //TODO
-void TRF7962A::spiEnable() {
+void RvX_TRF7962A::spiEnable() {
   setSlaveSelect(false);
 }
-void TRF7962A::spiDisable() {
+void RvX_TRF7962A::spiDisable() {
   setSlaveSelect(true);
 }
 
-uint8_t TRF7962A::readRegister(REGISTER regi) {
+uint8_t RvX_TRF7962A::readRegister(REGISTER regi) {
   return readRegister((uint8_t)regi);
 }
-uint8_t TRF7962A::readRegister(uint8_t regi) {
+uint8_t RvX_TRF7962A::readRegister(uint8_t regi) {
   uint8_t data = regi & 0b00011111;
   data |= (uint8_t)REG_CMD_WORD_BITS::REGISTER_B7 | (uint8_t)REG_CMD_WORD_BITS::READ_B6;
 
@@ -211,14 +211,14 @@ uint8_t TRF7962A::readRegister(uint8_t regi) {
 
   return res2;
 }
-void TRF7962A::readRegisterCont(REGISTER regi, uint8_t* buffer, uint8_t length) {
+void RvX_TRF7962A::readRegisterCont(REGISTER regi, uint8_t* buffer, uint8_t length) {
   readRegisterCont((uint8_t)regi, buffer, length);
 }
-void TRF7962A::readRegisterCont(uint8_t regi, uint8_t* buffer, uint8_t length) {
+void RvX_TRF7962A::readRegisterCont(uint8_t regi, uint8_t* buffer, uint8_t length) {
   buffer[0] = regi;
   readRegisterCont(buffer, length);
 }
-void TRF7962A::readRegisterCont(uint8_t* buffer, uint8_t length) {
+void RvX_TRF7962A::readRegisterCont(uint8_t* buffer, uint8_t length) {
   uint8_t data = *buffer & 0b00011111;
   data |= (uint8_t)REG_CMD_WORD_BITS::REGISTER_B7 | (uint8_t)REG_CMD_WORD_BITS::READ_B6 | (uint8_t)REG_CMD_WORD_BITS::CONTINUOUS_MODE_REG_B5;
 
@@ -232,10 +232,10 @@ void TRF7962A::readRegisterCont(uint8_t* buffer, uint8_t length) {
   SPI.setDataMode(SPI_MODE0);
   spiDisable();
 }
-void TRF7962A::writeRegister(REGISTER regi, uint8_t value) {
+void RvX_TRF7962A::writeRegister(REGISTER regi, uint8_t value) {
   writeRegister((uint8_t)regi, value);
 }
-void TRF7962A::writeRegister(uint8_t regi, uint8_t value) {
+void RvX_TRF7962A::writeRegister(uint8_t regi, uint8_t value) {
   uint8_t data = regi & 0b00011111;
   data |= (uint8_t)REG_CMD_WORD_BITS::REGISTER_B7 | (uint8_t)REG_CMD_WORD_BITS::WRITE_B6;
   
@@ -244,10 +244,10 @@ void TRF7962A::writeRegister(uint8_t regi, uint8_t value) {
   SPI.transfer(value);
   spiDisable();
 }
-void TRF7962A::sendCommand(DIRECT_COMMANDS command) {
+void RvX_TRF7962A::sendCommand(DIRECT_COMMANDS command) {
   return sendCommand((uint8_t)command);
 }
-void TRF7962A::sendCommand(uint8_t command) {
+void RvX_TRF7962A::sendCommand(uint8_t command) {
   uint8_t data = command & 0b00011111;
   data |= (uint8_t)REG_CMD_WORD_BITS::COMMAND_B7 | (uint8_t)REG_CMD_WORD_BITS::WRITE_B6;
 
@@ -257,7 +257,7 @@ void TRF7962A::sendCommand(uint8_t command) {
   spiDisable();
 }
 
-void TRF7962A::sendRaw(uint8_t* buffer, uint8_t length) {
+void RvX_TRF7962A::sendRaw(uint8_t* buffer, uint8_t length) {
   const uint8_t maxFifoSize = 12;
   trfStatus = TRF_STATUS::TRF_IDLE;
   if (maxFifoSize+5 > length) {
@@ -326,7 +326,7 @@ void TRF7962A::sendRaw(uint8_t* buffer, uint8_t length) {
 		}
   }
 }
-void TRF7962A::sendRawSPI(uint8_t* buffer, uint8_t length, bool continuedSend) {
+void RvX_TRF7962A::sendRawSPI(uint8_t* buffer, uint8_t length, bool continuedSend) {
   spiEnable();
 
   if (continuedSend)
@@ -339,7 +339,7 @@ void TRF7962A::sendRawSPI(uint8_t* buffer, uint8_t length, bool continuedSend) {
 
   spiDisable();
 }
-TRF7962A::ISO15693_RESULT TRF7962A::ISO15693_readSingleBlock(uint8_t blockId, uint8_t* blockData) {
+RvX_TRF7962A::ISO15693_RESULT RvX_TRF7962A::ISO15693_readSingleBlock(uint8_t blockId, uint8_t* blockData) {
   uint8_t offset = 0;
 
 	trfBuffer[offset++] = 0x02;		// ISO15693 flags - ISO15693_REQ_DATARATE_HIGH
@@ -369,7 +369,7 @@ TRF7962A::ISO15693_RESULT TRF7962A::ISO15693_readSingleBlock(uint8_t blockId, ui
   return ISO15693_RESULT::READ_SINGLE_BLOCK_INVALID_RESPONSE; //TODO 
 }
 
-TRF7962A::ISO15693_RESULT TRF7962A::ISO15693_sendSingleSlotInventory(uint8_t* uid) {
+RvX_TRF7962A::ISO15693_RESULT RvX_TRF7962A::ISO15693_sendSingleSlotInventory(uint8_t* uid) {
   //uint8_t g_ui8TagDetectedCount;
   uint8_t ui8LoopCount = 0;
   uint8_t offset = 0;
@@ -392,7 +392,7 @@ TRF7962A::ISO15693_RESULT TRF7962A::ISO15693_sendSingleSlotInventory(uint8_t* ui
 	}
   return ISO15693_RESULT::INVENTORY_INVALID_RESPONSE; //TODO 
 }
-TRF7962A::ISO15693_RESULT TRF7962A::ISO15693_getRandomSlixL(uint8_t* random) {
+RvX_TRF7962A::ISO15693_RESULT RvX_TRF7962A::ISO15693_getRandomSlixL(uint8_t* random) {
   uint8_t offset = 0;
   
 	trfBuffer[offset++] = 0x02;		// ISO15693 flags - ISO15693_REQ_DATARATE_HIGH
@@ -415,7 +415,7 @@ TRF7962A::ISO15693_RESULT TRF7962A::ISO15693_getRandomSlixL(uint8_t* random) {
   }
   return ISO15693_RESULT::GET_RANDOM_INVALID; //TODO
 }
-TRF7962A::ISO15693_RESULT TRF7962A::ISO15693_setPassSlixL(uint8_t pass_id, uint32_t password) {
+RvX_TRF7962A::ISO15693_RESULT RvX_TRF7962A::ISO15693_setPassSlixL(uint8_t pass_id, uint32_t password) {
   uint8_t offset = 0;
   uint8_t random[2];
   
@@ -457,7 +457,7 @@ TRF7962A::ISO15693_RESULT TRF7962A::ISO15693_setPassSlixL(uint8_t pass_id, uint3
   return ISO15693_RESULT::SET_PASSWORD_INCORRECT; //TODO
 }
 
-void TRF7962A::reinitRFID() {
+void RvX_TRF7962A::reinitRFID() {
   clearInterrupt();
   trfOffset = 0;
   trfRxLength = 0;
@@ -465,20 +465,20 @@ void TRF7962A::reinitRFID() {
   turnFieldOn();
 }
 
-uint8_t TRF7962A::readIrqRegister() {
+uint8_t RvX_TRF7962A::readIrqRegister() {
   uint8_t buffer[2];
   buffer[0] = (uint8_t)REGISTER::IRQ_STATUS;
   buffer[1] = 0x00;
   readRegisterCont(buffer, 2);
   return buffer[0];
 }
-void TRF7962A::clearIrqRegister() {
+void RvX_TRF7962A::clearIrqRegister() {
   uint8_t buffer[2];
   buffer[0] = (uint8_t)REGISTER::IRQ_STATUS;
   buffer[1] = (uint8_t)REGISTER::IRQ_MASK;
   readRegisterCont(buffer, 2);
 }
-TRF7962A::TRF_STATUS TRF7962A::waitRxData(uint8_t txTimeout, uint8_t rxTimeout) {
+RvX_TRF7962A::TRF_STATUS RvX_TRF7962A::waitRxData(uint8_t txTimeout, uint8_t rxTimeout) {
   switch (trfStatus) {
   case TRF_STATUS::TRF_IDLE:
   case TRF_STATUS::TX_WAIT:
@@ -504,7 +504,7 @@ TRF7962A::TRF_STATUS TRF7962A::waitRxData(uint8_t txTimeout, uint8_t rxTimeout) 
   return trfStatus;
 }
 
-void TRF7962A::waitTxIRQ(uint8_t txTimeout) {
+void RvX_TRF7962A::waitTxIRQ(uint8_t txTimeout) {
   trfStatus = TRF_STATUS::RX_WAIT;
   while (trfStatus != TRF_STATUS::TX_COMPLETE && trfStatus != TRF_STATUS::TX_ERROR) {
     clearInterrupt();
@@ -525,7 +525,7 @@ void TRF7962A::waitTxIRQ(uint8_t txTimeout) {
     }
   }
 }
-void TRF7962A::waitRxIRQ(uint8_t rxTimeout) {
+void RvX_TRF7962A::waitRxIRQ(uint8_t rxTimeout) {
   trfOffset = 0;
   trfStatus = TRF_STATUS::RX_WAIT;
   while (trfStatus == TRF_STATUS::RX_WAIT) {
@@ -556,7 +556,7 @@ void TRF7962A::waitRxIRQ(uint8_t rxTimeout) {
   }  
 }
 
-void TRF7962A::timeoutIRQ() {
+void RvX_TRF7962A::timeoutIRQ() {
   IRQ_STATUS irqStatus = (IRQ_STATUS)readIrqRegister();
   if (irqStatus == IRQ_STATUS::TX_COMPLETE) {
     trfStatus = TRF_STATUS::TX_COMPLETE;
@@ -567,7 +567,7 @@ void TRF7962A::timeoutIRQ() {
   }
 }
 
-void TRF7962A::resetRFID() {
+void RvX_TRF7962A::resetRFID() {
   sendCommand(DIRECT_COMMANDS::SOFT_INIT);
   sendCommand(DIRECT_COMMANDS::IDLING);
   delayTask(1); //Box.delayTask(1) --> crashes!
@@ -577,7 +577,7 @@ void TRF7962A::resetRFID() {
   trfRxLength = 0;
   trfStatus = TRF_STATUS::TRF_IDLE;
 }
-void TRF7962A::initRFID() {
+void RvX_TRF7962A::initRFID() {
   //Log.info("initRFID();");
   /* SETUP START */
   writeRegister(REGISTER::ISO_CONTROL, 0b10000010); //ISO / IEC 15693 high bit rate, 26.48 kbps, one subcarrier, 1 out of 4 no crcr
@@ -591,10 +591,10 @@ void TRF7962A::initRFID() {
   /* SETUP END */
 }
 
-TRF7962A::TRF_STATUS TRF7962A::sendDataTag(uint8_t *sendBuffer, uint8_t sendLen) {
+RvX_TRF7962A::TRF_STATUS RvX_TRF7962A::sendDataTag(uint8_t *sendBuffer, uint8_t sendLen) {
   return sendDataTag(sendBuffer, sendLen, 15, 15);  //15, 5 vs. 15, 15 (longer timeout for set password)
 }
-TRF7962A::TRF_STATUS TRF7962A::sendDataTag(uint8_t *sendBuffer, uint8_t sendLen, uint8_t txTimeout, uint8_t rxTimeout) {
+RvX_TRF7962A::TRF_STATUS RvX_TRF7962A::sendDataTag(uint8_t *sendBuffer, uint8_t sendLen, uint8_t txTimeout, uint8_t rxTimeout) {
   uint8_t buffer[sendLen+5];
   memcpy(&buffer[5], sendBuffer, sendLen);
 
@@ -611,12 +611,12 @@ TRF7962A::TRF_STATUS TRF7962A::sendDataTag(uint8_t *sendBuffer, uint8_t sendLen,
   return status;
 }
 
-void TRF7962A::getUID(uint8_t* uid) {
+void RvX_TRF7962A::getUID(uint8_t* uid) {
   for (int i=0;i<7;i++) {
     uid[i] = tagUid[i];
   }
 }
-void TRF7962A::getUIDString(uint8_t* uid) {
+void RvX_TRF7962A::getUIDString(uint8_t* uid) {
   //size 24 (7 + 16 + 1)
   sprintf(
     (char*)uid,
@@ -625,8 +625,8 @@ void TRF7962A::getUIDString(uint8_t* uid) {
   );
 }
 
-uint8_t TRF7962A::readBlocks(uint8_t* data, uint8_t maxBytes) {
-  TRF7962A::ISO15693_RESULT result;
+uint8_t RvX_TRF7962A::readBlocks(uint8_t* data, uint8_t maxBytes) {
+  RvX_TRF7962A::ISO15693_RESULT result;
   uint8_t bytesRead = 0;
 
   resetRFID();
@@ -645,20 +645,20 @@ uint8_t TRF7962A::readBlocks(uint8_t* data, uint8_t maxBytes) {
   return bytesRead;
 }
 
-void TRF7962A::turnFieldOn() {
+void RvX_TRF7962A::turnFieldOn() {
   writeRegister(REGISTER::CHIP_STATUS_CONTROL, 0b00100001); //turnRfOn();
   // The VCD should wait at least 1 ms after it activated the
   // powering field before sending the first request, to
   // ensure that the VICCs are ready to receive it. (ISO15693-3)
   delayTask(10); //not 1 ms?! 20ms works
 }
-void TRF7962A::turnFieldOff() {
+void RvX_TRF7962A::turnFieldOff() {
   writeRegister(REGISTER::CHIP_STATUS_CONTROL, 0b00000001); //turnRfOff();
 }
 
-TRF7962A::ISO15693_RESULT TRF7962A::getLastResult() {
+RvX_TRF7962A::ISO15693_RESULT RvX_TRF7962A::getLastResult() {
   return lastResult;
 }
-TRF7962A::TRF_STATUS TRF7962A::getLastTrfStatus() {
+RvX_TRF7962A::TRF_STATUS RvX_TRF7962A::getLastTrfStatus() {
   return trfStatus;
 }
